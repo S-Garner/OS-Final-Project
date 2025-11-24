@@ -5,5 +5,5 @@ g++ src/main.cpp -o pager
 
 # Running project
 ```bash
-./pager <input file>
+./pager <input_file>
 ```
