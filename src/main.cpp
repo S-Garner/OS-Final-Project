@@ -34,79 +34,73 @@ std::string readLineFromFile(const char *filename) {    // Function header
  * @param refCount The number of references in the input line.
  */
 
-void parseInputLine(const std::string &line,            // The input line to parse
-                    char &algo,                         // The selected algorithm
-                    int &frameCount,                    // Number of frames that can be used
-                    int refs[],                         // Reference to the string value from the file
-                    int &refCount)                      // Number of references in the input line
+void parseInputLine(const std::string &line,
+                    char &algo,
+                    int &frameCount,
+                    int refs[],
+                    int &refCount)
 {
-    algo = 0;                                           // Set the algorithm to 0
-    frameCount = 0;                                     // Set the number of frames to 0
-    refCount = 0;                                       // Set the number of references to 0
+    // Reset output variables before parsing begins.
+    algo = 0;
+    frameCount = 0;
+    refCount = 0;
 
-    int i = 0;                                          // Index for the input line, set to 0
-    int n = line.size();                                // Size of the input line
+    int i = 0;
+    int n = line.size();
 
-    while (i < n &&                                     // While index is less than the size of the input line
-           (line[i] == ' ' ||                           // If the character is a space
-            line[i] == '\t'))                           // Or if the character is a tab
-        i++;                                            // Increment the index
+    // Skip leading whitespace before reading the algorithm code.
+    while (i < n && (line[i] == ' ' || line[i] == '\t'))
+        i++;
 
-    if (i < n)                                          // If the index is less than the size of the input line
-        algo = line[i++];                               // Set the algorithm to the character at index
-    else                                                // else
-        return;                                         // Return
+    // First non-space character is the algorithm identifier (F, O, or L).
+    if (i < n)
+        algo = line[i++];
+    else
+        return;   // Empty or malformed line.
 
-    while (i < n &&                                     // While index is less than the size of the input line
-           line[i] != ',')                              // And the character is not a comma
-        i++;                                            // Increment the index
+    // Move forward to the comma after the algorithm character.
+    while (i < n && line[i] != ',')
+        i++;
+    if (i < n) i++;   // Skip comma
 
-    if (i < n &&                                        // If the index is less than the size of the input line
-        line[i] == ',')                                 // And the character is a comma
-        i++;                                            // Increment the index
+    // Parse the frame count (may contain multiple digits).
+    // Convert characters to an integer until hitting a non-digit.
+    while (i < n && line[i] >= '0' && line[i] <= '9') {
+        frameCount = frameCount * 10 + (line[i] - '0');
+        i++;
+    }
 
-    while (i < n &&                                     // While index is less than the size of the input line
-           line[i] >= '0' &&                            // And character is greater than or equal to 0
-           line[i] <= '9') {                            // And character is less than or equal to 9
-        frameCount =                                    // frameCount is equal to
-        frameCount * 10 +                               // frameCount * 10 multi digit numbers
-        (line[i] - '0');                                // subtract the character from '0' to convert to numeric value
-        i++;                                            // Increment the index
-    }                                                   // End of while loop
+    // Skip the comma separating frame count from the reference string.
+    if (i < n && line[i] == ',')
+        i++;
 
-    if (i < n &&                                        // If the index is less than the size of
-        line[i] == ',')                                 // And line is a comma
-        i++;                                            // Increment the index
+    // Parse the rest of the line as the page-reference sequence.
+    // Skip commas/whitespace, then read each multi-digit number into refs[].
+    while (i < n) {
 
-    while (i < n) {                                     // While index is less than the size of the input line
+        // Skip separators between numbers.
+        while (i < n &&
+              (line[i] == ',' || line[i] == ' ' || line[i] == '\t'))
+            i++;
 
-        while (i < n &&                                 // While index is less than the size of the input line
-               (line[i] == ',' ||                       // And line is a comma
-                line[i] == ' ' ||                       // Or line is a space
-                line[i] == '\t'))                       // Or line is a tab
-            i++;                                        // Increment the index
+        if (i >= n) break;
 
-        if (i >= n) break;                              // Break the loop if index is greater than or equal to the size of the input line
+        int val = 0;
+        bool hasDigit = false;
 
-        int val = 0;                                    // Initialize val to 0
-        bool hasDigit = false;                          // Initialize hasDigit to false
+        // Convert continuous digits into an integer value.
+        while (i < n && line[i] >= '0' && line[i] <= '9') {
+            val = val * 10 + (line[i] - '0');
+            hasDigit = true;
+            i++;
+        }
 
-        while (i < n &&                                 // While index is less than the size of the input line
-               line[i] >= '0' &&                        // And character is greater than or equal to 0
-               line[i] <= '9') {                        // And character is less than or equal to 9 
+        // Store parsed page reference in the refs array.
+        if (hasDigit)
+            refs[refCount++] = val;
+    }
+}
 
-            val =                                       // Set val to
-            val * 10 +                                  // val * 10
-            (line[i] - '0');                            // Character minus '0'
-            hasDigit = true;                            // Set hasDigit to true
-
-            i++;                                        // Increment the index
-        }                                               // End of while loop
-
-        if (hasDigit)                                   // If hadDigit is true
-            refs[refCount++] = val;                     // Add val to ref at refCount and increment refCount
-    }                                                   // End while loop
-}                                                       // End of function readInputLine
 
 /**
  * @brief Wipe the view table
@@ -228,180 +222,174 @@ void testers()
  * @return Number of page faults that occurred while running FIFO
  */
 
-int FIFO(int frameCount,                                // Number of frames that can be used
-         int refs[],                                    // Array of page references from input
-         int refCount,                                  // Number of page references in the input
-         int table[][1000])                             // Table used to record all frame states
+int FIFO(int frameCount,
+         int refs[],
+         int refCount,
+         int table[][1000])
 {
-    std::cout << "Running FIFO" << std::endl;           // Display that the program is running FIFO
+    std::cout << "Running FIFO" << std::endl;
 
-    // Frames[i] = page in frame i, or -1 if empty
-    int frames[50];                                     // Array to hold the current pages in each frame
+    int frames[50];     // The memory frames currently holding pages
 
-    // Initialize all frames as empty                   // Start of for loop
-    for (int i = 0; i < frameCount; i++)                // While index is less than the number of frames
-    {                                                   // Increment index by one
-        frames[i] = -1;                                 // Set frame to -1 (empty)
-    }                                                   // End for loop
+    // Initialize all frames as empty (-1 means no page loaded yet)
+    for (int i = 0; i < frameCount; i++)
+        frames[i] = -1;
 
-    int pageFaults = 0;                                 // Store number of page faults
+    int pageFaults = 0;     // Count how many misses occur
+    int fifoIndex = 0;      // Points to the next frame to evict (oldest loaded page)
 
-    int fifoIndex = 0;                                  // Index of the next frame to replace/FIFO queue pointer
+    // Walk through each page request one at a time
+    for (int t = 0; t < refCount; t++)
+    {
+        int page = refs[t];
 
-    // t for time
-    for (int t = 0; t < refCount; t++)                  // Start of for loop over all references (time steps)
-    {                                                   // While index is less than the number of references, increment by one
-        int page = refs[t];                             // Get the current page reference
+        // Check whether the page is already in memory
+        int position = findPage(frames, frameCount, page);
 
-        int position = findPage(frames, frameCount, page);  // Check if the page is already in one of the frames, number of frames that can be used, page to find
+        bool fault = false;
 
-        bool fault = false;                             // Track whether a page fault occurred at this step
-
-        if (position == -1)                             // If the page is not currently in any frame
+        // If not present, FIFO must load it
+        if (position == -1)
         {
-            fault = true;                               // This is a page fault
-            pageFaults++;                               // Increment page fault counter
+            fault = true;
+            pageFaults++;
 
-            // Search for free frame first
-            int freeIndex = -1;                         // Index of a free (empty) frame if any exists
-
-            for (int i = 0; i < frameCount; i++)        // Start of for loop, while index is less than the number of frames, increment index by one
-            {
-                if (frames[i] == -1)                    // If this frame is empty
-                {
-                    freeIndex = i;                      // Mark this frame as free
-                    break;                              // Break out of loop once a free frame is found
-                }                                       // End if statement
-            }                                           // End for loop
-
-            if (freeIndex != -1)                        // If a free frame was found
-            {
-                // Still space, use first free frame
-                frames[freeIndex] = page;               // Place the new page into the free frame
-            } else {                                    // Else there is no free frame available
-                // No free frame, replace using FIFO
-                frames[fifoIndex] = page;               // Replace the page at fifoIndex
-                fifoIndex = (fifoIndex + 1) % frameCount; // Move FIFO pointer to the next frame
-            }                                           // End if statement
-        }                                               // End for loop
-
-        // Only write frames into table when a fault occurs
-        // Else the column stays blank when printed
-        // f for frame
-        if (fault)                                      // If a page fault occurred at this time step
-        {
-            for (int f = 0; f < frameCount; f++)        // Start of for loop, while index is less than the number of frames, increment index by one
-            {
-                table[f][t] = frames[f];                // Store the current content of each frame in the table
-            }                                           // End for loop
-        }                                               // End if statement
-
-    }
-
-    return pageFaults;                                  // Return the number of page faults that occurred
-}                                                       // End FIFO function
-
-int OPT(int frameCount,                                 // Number 
-        int refs[],                                     // References from file
-        int refCount,                                   // Number of references
-        int table[][1000])                              // Table to store frames
-{
-    std::cout << "Running OPT" << std::endl;            // Display that the program is running OPT
-
-    int frames[50];                                     // Initialize frames array
-
-    for (int i = 0;                                     // Start of for loop
-         i < frameCount;                                // While index is less than the number of frames
-         i++) {                                         // Increment index
-
-        frames[i] = -1;                                 // Set frame to -1; Zeroize frames
-    }                                                   // End for loop
-
-    int pageFaults = 0;                                 // Initialize page faults to zero
-
-    for (int t = 0;                                     // Start for loop 
-         t < refCount;                                  // While the index is less than the number of references in the input file
-         t++) {                                         // Increment index       
-
-        int page = refs[t];                             // Get the current reference
-
-        int pos = findPage(frames,                      // Find the position of the current reference in the frames array
-                           frameCount,                  // Number of frames we can use
-                           page);                       // What page we are currently on
-
-        bool fault = false;                             // Initialize fault to false
-
-        if (pos == -1) {                                // If position is zeroed
-            fault = true;                               // Set fault to true
-            pageFaults++;                               // Increment page faults
-
-            int freeIndex = -1;                         // Initialize free index to zeroed value
-
-            for (int i = 0;                             // Start for loop
-                 i < frameCount;                        // While the index is less than the number of frames we can use
-                 i++) {                                 // Increment index
-
-                if (frames[i] == -1) {                  // If the current frame is empty
-                    freeIndex = i;                      // Set free index to current frame
-                    break;                              // Break out of loop
-                }                                       // End if statement
-
+            // Look for an unused spot before replacing anything
+            int freeIndex = -1;
+            for (int i = 0; i < frameCount; i++) {
+                if (frames[i] == -1) {
+                    freeIndex = i;
+                    break;
+                }
             }
 
-            if (freeIndex != -1) {                      // If there is an empty frame
+            if (freeIndex != -1) {
+                // There is still empty space then load page into the first empty frame
+                frames[freeIndex] = page;
+            }
+            else {
+                // No empty frame then move the oldest page 
+                frames[fifoIndex] = page;
 
-                frames[freeIndex] = page;               // Set the frame to the current page
+                // Move the FIFO pointer so the next eviction replaces the next oldest frame
+                fifoIndex = (fifoIndex + 1) % frameCount;
+            }
+        }
 
-            } else {                                    // Else
+        // Only record the table state when the memory actually changed,
+        // on page faults
+        if (fault) {
+            for (int f = 0; f < frameCount; f++)
+                table[f][t] = frames[f];
+        }
+    }
 
-                int replaceIndex = 0;                   // Initialize replace index to zeroed value
-                int farthestUse = -1;                   // Initialize farthest use to zeroed value
-
-                for (int i = 0;                         // Start for loop
-                     i < frameCount;                    // While the index is less than the number of frames we can use
-                     i++) {                             // Increment index
-
-                    int currentPage = frames[i];        // Get the current page
-                    int nextUse = -1;                   // Initialize next use to zeroed value
+    return pageFaults;
+}
 
 
-                    for (int j = t + 1;                 // Start for loop
-                         j < refCount;                  // While the index is less than the number of references
-                         j++) {                         // Increment index
+int OPT(int frameCount,
+        int refs[],
+        int refCount,
+        int table[][1000])
+{
+    std::cout << "Running OPT" << std::endl;
 
-                        if (refs[j] == currentPage) {   // If the current reference is equal to the current page
-                            nextUse = j;                // Set next use to the current index
-                            break;                      // Break the loop
-                        }                               // End if statement
-                    }                                   // End for loop
+    int frames[50];
+    
+    // Initialize all memory frames as empty
+    // Each entry represents which page is currently stored in that frame
+    for (int i = 0; i < frameCount; i++) {
+        frames[i] = -1;
+    }
 
-                    if (nextUse == -1) {                // If next use is equal to -1
+    int pageFaults = 0;
 
-                        replaceIndex = i;               // Set replace index to i
-                        farthestUse = refCount + 1;     // Set farthest use to ref count + 1
-                        break;                          // Break the loop
+    // Step through each page request in order
+    // At each step, check if the requested page is already loaded
+    // If not loaded, OPT decides which page to evict based on future use
+    for (int t = 0; t < refCount; t++) {
 
-                    } else if (nextUse > farthestUse) { // Else if next is greatest than farthest use
+        int page = refs[t];
 
-                        farthestUse = nextUse;          // Set farthest use to next use
-                        replaceIndex = i;               // Set replace index to i
-                    }                                   // End if statement
-                }                                       // End for loop
+        // Determine whether the page is already in memory
+        int pos = findPage(frames, frameCount, page);
 
-                frames[replaceIndex] = page;            // Set frame at replace index to page
-            }                                           // End if statement
-        }                                               // End for loop
+        bool fault = false;
 
-        if (fault) {                                    // If fault is true
-            for (int f = 0; f < frameCount; f++) {      // While f is less than frame count
-                table[f][t] = frames[f];                // Set table at f to frames[f]
-            }                                           // End for loop
-        }                                               // End if statement
-    }                                                   // End for statement
+        if (pos == -1) {
 
-    return pageFaults;                                  // Return page faults
-}                                                       // End OPT function
+            fault = true;
+            pageFaults++;
 
+            int freeIndex = -1;
+
+            // Look for an unused frame first
+            // If one exists, load the page into that slot and continue
+            for (int i = 0; i < frameCount; i++) {
+                if (frames[i] == -1) {
+                    freeIndex = i;
+                    break;
+                }
+            }
+
+            // Case 1: There is an empty frame then load page there
+            if (freeIndex != -1) {
+                frames[freeIndex] = page;
+            }
+
+            // Case 2: No empty frame then choose a victim using OPT logic
+            else {
+
+                int replaceIndex = 0;
+                int farthestUse = -1;
+
+                // For every page currently loaded, determine when it will next be used
+                // The page whose next use is farthest in the future (or never used again)
+                // is the optimal page to evict
+                for (int i = 0; i < frameCount; i++) {
+
+                    int currentPage = frames[i];
+                    int nextUse = -1;
+
+                    // Scan forward in the reference string to find when this page is next referenced
+                    for (int j = t + 1; j < refCount; j++) {
+                        if (refs[j] == currentPage) {
+                            nextUse = j;
+                            break;
+                        }
+                    }
+
+                    // If a page is never used again it is the optimal eviction target immediately
+                    if (nextUse == -1) {
+                        replaceIndex = i;
+                        farthestUse = refCount + 1;  // Marker meaning "never used again"
+                        break;
+                    }
+
+                    // Otherwise track the page with the farthest next occurrence
+                    else if (nextUse > farthestUse) {
+                        farthestUse = nextUse;
+                        replaceIndex = i;
+                    }
+                }
+
+                // Evict the chosen page and load the requested one
+                frames[replaceIndex] = page;
+            }
+        }
+
+        // Only record table state when a fault occurred
+        // This captures the "visual" of how frames changed due to OPT decisions
+        if (fault) {
+            for (int f = 0; f < frameCount; f++) {
+                table[f][t] = frames[f];
+            }
+        }
+    }
+
+    return pageFaults;
+}
 
 /**
  * @brief Runs the LRU algorithm, which will remove the least recently used page from memory when a new page fault occurs
@@ -412,83 +400,88 @@ int LRU(int frameCount,
         int refCount,
         int table[][1000])
 {
-    std::cout << "Running LRU" << std::endl;            // Display that the program is running LRU
+    std::cout << "Running LRU" << std::endl;
 
-    int frames[50];                                     // Array to hold the frames
-    int lastUsed[50];                                   // Array to hold the last used time of each frame
-                                                        // Clear frames and lastUsed to -1
-    for (int i = 0;                                     // Start of for loop
-         i < frameCount;                                // As long as index is less than the number of frames
-         i++) {                                         // Increment index by one
+    int frames[50];     
+    int lastUsed[50];  
 
-        frames[i] = -1;                                 // Set the value of frames to -1
-        lastUsed[i] = -1;                               // Set the value of lastUsed to -1
-    }                                                   // End of for loop
+    // Initialize all frames as empty and mark every frame as never used
+    for (int i = 0; i < frameCount; i++) {
+        frames[i] = -1;
+        lastUsed[i] = -1;
+    }
 
-    int pageFaults = 0;                                 // Store number of page faults
+    int pageFaults = 0;
 
-    for (int t = 0;                                     // Start of for loop
-         t < refCount;                                  // As long as index is less than the number of references
-         t++) {                                         // Increment index by one
+    // Process each page reference in order
+    // At each time step t, decide whether the page exists
+    // or must be brought into memory
+    for (int t = 0; t < refCount; t++) {
 
-        int page = refs[t];                             // Store the current reference in page
-                                                        // Check if the current reference is in the frames
-        int position = findPage(frames,                 // Frames array
-                                frameCount,             // How many frames we use
-                                page);                  // Page to find
+        int page = refs[t];
 
-        bool fault = false;                             // Default fault to false
+        // Check whether the requested page is already loaded
+        int position = findPage(frames, frameCount, page);
 
-        if (position != -1) {                           // If the current position does not equal -1
-            lastUsed[position] = t;                     // Set last used at this position to current index
-        } else {                                        // Else if the current position does equal -1
-            fault = true;                               // Set fault to true
-            pageFaults++;                               // Increment page faults
+        bool fault = false;
 
-            int freeIndex = -1;                         // Set the index to -1
+        if (position != -1) {
+            // Page is already in memory
+            // Update the "last used" timestamp to reflect recent access
+            lastUsed[position] = t;
+        } 
+        else {
+            // Page is missing then this is a page fault
+            fault = true;
+            pageFaults++;
 
-            for (int i = 0;                             // Start of for loop
-                 i < frameCount;                        // As long as index is less than the number of frames we can use
-                 i++) {                                 // Increment index by one
-
-                if (frames[i] == -1) {                  // If this frame is equal to -1
-                    freeIndex = i;                      // Set the free index to this index to show this is available
-                    break;                              // Break
-                }                                       // End if statement
+            // First try to find an unused empty frame
+            int freeIndex = -1;
+            for (int i = 0; i < frameCount; i++) {
+                if (frames[i] == -1) {
+                    freeIndex = i;
+                    break;
+                }
             }
 
-            if (freeIndex != -1) {                      // If the free index is not -1
-                frames[freeIndex] = page;               // Set this frames index to the current page
-                lastUsed[freeIndex] = t;                // Set the last used to current current index
-            } else {                                    // Else if
-                int lruIndex = 0;                       // Set the LRU index 
-                int oldest = lastUsed[0];               // Set the the oldest to the first element in the array
+            if (freeIndex != -1) {
+                // If an empty frame exists, load the page there
+                frames[freeIndex] = page;
+                lastUsed[freeIndex] = t;
+            } 
+            else {
+                // No empty frames then choose the least recently used page
+                // Scan all frames and pick the one with the oldest timestamp
+                int lruIndex = 0;
+                int oldest = lastUsed[0];
 
-                for (int i = 1;                         // Start of for loop
-                     i < frameCount;                    // As long as index is less than the number of frames we can use
-                     i++) {                             // Increment index by one
-                    if (lastUsed[i] < oldest) {         // If the last used is less than the oldest
-                        oldest = lastUsed[i];           // Set the oldest to this index
-                        lruIndex = i;                   // Set the lru index to this index
-                    }                                   // End if statement
-                }                                       // End for loop
+                for (int i = 1; i < frameCount; i++) {
+                    if (lastUsed[i] < oldest) {
+                        oldest = lastUsed[i];
+                        lruIndex = i;
+                    }
+                }
 
-                frames[lruIndex] = page;                // Set the frame at the lru index to this page
-                lastUsed[lruIndex] = t;                 // Set the last used at the lru index to this index
-            }                                           // End else statement
-        }                                               // End else statement
+                // Replace the LRU page with the new page
+                // and update its usage timestamp
+                frames[lruIndex] = page;
+                lastUsed[lruIndex] = t;
+            }
+        }
 
-        if (fault) {                                    // If the fault is true
-            for (int f = 0;                             // Start of for loop
-                 f < frameCount;                        // As long as index is less than the number of frames we can use
-                 f++) {                                 // Increment index by one
-                table[f][t] = frames[f];                // Set the table at this index to this frame
-            }                                           // End for loop
-        }                                               // End if statement
-    }                                                   // End for loop
+        // If a fault occurred this step,
+        // record the current frame contents in the display table
+        if (fault) {
+            for (int f = 0; f < frameCount; f++) {
+                table[f][t] = frames[f];
+            }
+        }
+    }
 
-    return pageFaults;                                  // Return the number of page faults that occurred
-}                                                       // End of LRU function
+    // Return the total number of faults observed
+    return pageFaults;
+}
+
 
 /**
  * @brief Prints the table to stdout
