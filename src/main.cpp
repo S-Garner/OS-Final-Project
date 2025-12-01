@@ -216,79 +216,90 @@ void testers()
 
 }                                                       // End testers function
 
-int FIFO(int frameCount,
-         int refs[],
-         int refCount,
-         int table[][1000])
+/**
+ * @brief Runs the FIFO algorithm that removes oldest loaded page
+ *        when new page fault occurs and no free frame is available
+ *
+ * @param frameCount Number of frames that can be used
+ * @param refs[]     Array of page references from the input
+ * @param refCount   Number of page references in the input
+ * @param table[][]  Table used to record the frame contents over time
+ *
+ * @return Number of page faults that occurred while running FIFO
+ */
+
+int FIFO(int frameCount,                                // Number of frames that can be used
+         int refs[],                                    // Array of page references from input
+         int refCount,                                  // Number of page references in the input
+         int table[][1000])                             // Table used to record all frame states
 {
-    std::cout << "Running FIFO" << std::endl;
+    std::cout << "Running FIFO" << std::endl;           // Display that the program is running FIFO
 
     // Frames[i] = page in frame i, or -1 if empty
-    int frames[50];
+    int frames[50];                                     // Array to hold the current pages in each frame
 
-    // Initialize all frames as empty
-    for (int i = 0; i < frameCount; i++)
-    {
-        frames[i] = -1;
-    }
+    // Initialize all frames as empty                   // Start of for loop
+    for (int i = 0; i < frameCount; i++)                // While index is less than the number of frames
+    {                                                   // Increment index by one
+        frames[i] = -1;                                 // Set frame to -1 (empty)
+    }                                                   // End for loop
 
-    int pageFaults = 0;
+    int pageFaults = 0;                                 // Store number of page faults
 
-    // FIFO queue pointer/ next frame to replace
-    int fifoIndex = 0;
+    int fifoIndex = 0;                                  // Index of the next frame to replace/FIFO queue pointer
 
     // t for time
-    for (int t = 0; t < refCount; t++)
-    {
-        int page = refs[t];
+    for (int t = 0; t < refCount; t++)                  // Start of for loop over all references (time steps)
+    {                                                   // While index is less than the number of references, increment by one
+        int page = refs[t];                             // Get the current page reference
 
-        int position = findPage(frames, frameCount, page);
+        int position = findPage(frames, frameCount, page);  // Check if the page is already in one of the frames, number of frames that can be used, page to find
 
-        bool fault = false;
+        bool fault = false;                             // Track whether a page fault occurred at this step
 
-        if (position == -1)
+        if (position == -1)                             // If the page is not currently in any frame
         {
-            fault = true;
-            pageFaults++;
+            fault = true;                               // This is a page fault
+            pageFaults++;                               // Increment page fault counter
 
             // Search for free frame first
-            int freeIndex = -1;
+            int freeIndex = -1;                         // Index of a free (empty) frame if any exists
 
-            for (int i = 0; i < frameCount; i++)
+            for (int i = 0; i < frameCount; i++)        // Start of for loop, while index is less than the number of frames, increment index by one
             {
-                if (frames[i] == -1)
+                if (frames[i] == -1)                    // If this frame is empty
                 {
-                    freeIndex = i;
-                    break;
-                }
-            }
+                    freeIndex = i;                      // Mark this frame as free
+                    break;                              // Break out of loop once a free frame is found
+                }                                       // End if statement
+            }                                           // End for loop
 
-            if (freeIndex != -1)
+            if (freeIndex != -1)                        // If a free frame was found
             {
                 // Still space, use first free frame
-                frames[freeIndex] = page;
-            } else {
+                frames[freeIndex] = page;               // Place the new page into the free frame
+            } else {                                    // Else there is no free frame available
                 // No free frame, replace using FIFO
-                frames[fifoIndex] = page;
-                fifoIndex = (fifoIndex + 1) % frameCount;
-            }
-        }
+                frames[fifoIndex] = page;               // Replace the page at fifoIndex
+                fifoIndex = (fifoIndex + 1) % frameCount; // Move FIFO pointer to the next frame
+            }                                           // End if statement
+        }                                               // End for loop
 
         // Only write frames into table when a fault occurs
         // Else the column stays blank when printed
         // f for frame
-        if (fault)
+        if (fault)                                      // If a page fault occurred at this time step
         {
-            for (int f = 0; f < frameCount; f++)
+            for (int f = 0; f < frameCount; f++)        // Start of for loop, while index is less than the number of frames, increment index by one
             {
-                table[f][t] = frames[f];
-            }
-        }
+                table[f][t] = frames[f];                // Store the current content of each frame in the table
+            }                                           // End for loop
+        }                                               // End if statement
 
     }
 
-    return pageFaults;
-}
+    return pageFaults;                                  // Return the number of page faults that occurred
+}                                                       // End FIFO function
 
 int OPT(int frameCount,                                 // Number 
         int refs[],                                     // References from file
