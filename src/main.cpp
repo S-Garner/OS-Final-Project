@@ -1,3 +1,25 @@
+/**
+ * Cache Replacement Simulator
+ *
+ * Simulates three classical page-replacement algorithms:
+ * FIFO, LRU, and OPT 
+ *
+ * Input file format:
+ *   <AlgorithmCode>,<FrameCount>,<ReferenceString>
+ *
+ * Example:
+ *   L,3,7,0,1,2,0,3,0,4
+ *
+ * Build:
+ *   g++ src/main.cpp -o cacher
+ *
+ * Run:
+ *   ./cacher <input_file>
+ *
+ * @author Connor Parr
+ * @author Seth Garner
+ */
+
 #include <string>
 #include <fstream>
 #include <iostream>
@@ -338,7 +360,7 @@ int OPT(int frameCount,
                 frames[freeIndex] = page;
             }
 
-            // Case 2: No empty frame then choose a victim using OPT logic
+            // Case 2: No empty frame then choose a page using OPT logic
             else {
 
                 int replaceIndex = 0;
